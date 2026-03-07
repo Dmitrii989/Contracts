@@ -7,27 +7,94 @@ function parseISODate(s: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const id = params?.id;
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+export async function GET(
+  _req: Request,
+  ctx: { params: { id: string } }
+) {
+  try {
+    const params = await Promise.resolve(ctx.params);
+    const id = String(params?.id ?? "").trim();
 
-  const body = await req.json().catch(() => ({}));
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
 
-  const updated = await prisma.tenant.update({
-    where: { id },
-    data: {
-      fio: typeof body?.fio === "string" ? body.fio : undefined,
-      birthDate: body?.birthDate === "" ? null : parseISODate(body?.birthDate),
-      passportSeries: body?.passportSeries === "" ? null : typeof body?.passportSeries === "string" ? body.passportSeries : undefined,
-      passportNumber: body?.passportNumber === "" ? null : typeof body?.passportNumber === "string" ? body.passportNumber : undefined,
-      passportIssuedBy: body?.passportIssuedBy === "" ? null : typeof body?.passportIssuedBy === "string" ? body.passportIssuedBy : undefined,
-      passportCode: body?.passportCode === "" ? null : typeof body?.passportCode === "string" ? body.passportCode : undefined,
-      passportIssuedAt: body?.passportIssuedAt === "" ? null : parseISODate(body?.passportIssuedAt),
-      regAddress: body?.regAddress === "" ? null : typeof body?.regAddress === "string" ? body.regAddress : undefined,
-      signInitials: body?.signInitials === "" ? null : typeof body?.signInitials === "string" ? body.signInitials : undefined,
-      signSurname: body?.signSurname === "" ? null : typeof body?.signSurname === "string" ? body.signSurname : undefined,
-    },
-  });
+    const item = await prisma.tenant.findUnique({
+      where: { id },
+    });
 
-  return NextResponse.json(updated);
+    if (!item) {
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(item, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: "Read tenant failed", details: String(e?.message ?? e) },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  ctx: { params: { id: string } }
+) {
+  try {
+    const params = await Promise.resolve(ctx.params);
+    const id = String(params?.id ?? "").trim();
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+
+    const fio =
+      typeof body?.fio === "string" ? body.fio.trim() : "";
+
+    if (!fio) {
+      return NextResponse.json({ error: "Missing fio" }, { status: 400 });
+    }
+
+    const updated = await prisma.tenant.update({
+      where: { id },
+      data: {
+        fio,
+        birthDate: parseISODate(body?.birthDate),
+        passportSeries:
+          typeof body?.passportSeries === "string"
+            ? body.passportSeries.trim() || null
+            : null,
+        passportNumber:
+          typeof body?.passportNumber === "string"
+            ? body.passportNumber.trim() || null
+            : null,
+        passportIssuedBy:
+          typeof body?.passportIssuedBy === "string"
+            ? body.passportIssuedBy.trim() || null
+            : null,
+        passportCode:
+          typeof body?.passportCode === "string"
+            ? body.passportCode.trim() || null
+            : null,
+        passportIssuedAt: parseISODate(body?.passportIssuedAt),
+        regAddress:
+          typeof body?.regAddress === "string"
+            ? body.regAddress.trim() || null
+            : null,
+      },
+    });
+
+    return NextResponse.json(updated, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: "Update tenant failed", details: String(e?.message ?? e) },
+      { status: 500 }
+    );
+  }
 }

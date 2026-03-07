@@ -147,16 +147,27 @@ const filteredItems = items.filter((c) => {
           </div>
 
           {filteredItems.map((c) => (
-            <div
-  key={c.id}
-  style={{
-    display: "grid",
-    gridTemplateColumns: GRID,
-    padding: "10px 12px",
-    borderTop: "1px solid #eee",
-    alignItems: "center",
-  }}
->
+  <div
+    key={c.id}
+    style={{
+      display: "grid",
+      gridTemplateColumns: GRID,
+      padding: "10px 12px",
+      borderTop: "1px solid #eee",
+      alignItems: "center",
+      cursor: "pointer",
+      transition: "background 0.2s ease",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = "#e5e7eb";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = "white";
+    }}
+    onClick={() => {
+      window.location.href = `/contracts/${c.id}`;
+    }}
+  >
               <div style={{ fontWeight: 800 }}>{c.number}</div>
 
               <div>{c.type === "PERSON" ? "Физик" : "Юрлицо"}</div>
@@ -182,6 +193,7 @@ const filteredItems = items.filter((c) => {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <a
                   href={`/api/contracts/${c.id}/docx`}
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     padding: "6px 10px",
                     border: "1px solid #ddd",
@@ -195,6 +207,7 @@ const filteredItems = items.filter((c) => {
 
                 <a
                   href={`/api/contracts/${c.id}/pdf`}
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     padding: "6px 10px",
                     border: "1px solid #ddd",

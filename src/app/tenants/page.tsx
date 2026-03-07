@@ -142,7 +142,7 @@ const filteredItems = items.filter((t) => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr",
+              gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr 120px",
               background: "#fafafa",
               padding: "10px 12px",
               fontWeight: 700,
@@ -154,6 +154,7 @@ const filteredItems = items.filter((t) => {
             <div>Код подразделения</div>
             <div>Дата выдачи</div>
             <div>Адрес регистрации</div>
+            <div style={{ textAlign: "right" }}>Действия</div>
           </div>
 
           {filteredItems.map((t) => (
@@ -161,7 +162,7 @@ const filteredItems = items.filter((t) => {
     key={t.id}
     style={{
       display: "grid",
-      gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr",
+      gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr 120px",
       padding: "10px 12px",
       borderTop: "1px solid #eee",
       alignItems: "center",
@@ -169,7 +170,7 @@ const filteredItems = items.filter((t) => {
       cursor: "default",
     }}
     onMouseEnter={(e) => {
-      (e.currentTarget.style.background = "#f9fafb");
+      (e.currentTarget.style.background = "#e5e7eb");
     }}
     onMouseLeave={(e) => {
       (e.currentTarget.style.background = "white");
@@ -183,6 +184,21 @@ const filteredItems = items.filter((t) => {
               <div>{t.passportCode || "—"}</div>
               <div>{fmtDate(t.passportIssuedAt)}</div>
               <div>{t.regAddress || "—"}</div>
+              <div style={{ textAlign: "right" }}>
+  <a
+    href={`/tenants/${t.id}`}
+    style={{
+      padding: "6px 10px",
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      textDecoration: "none",
+      fontSize: 13,
+      background: "white",
+    }}
+  >
+    Изменить
+  </a>
+</div>
             </div>
           ))}
         </div>
