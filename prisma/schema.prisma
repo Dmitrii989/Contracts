@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts Contract[]
+}
+
+model ContractCounter {
+  year Int @id
+  last Int @default(0)
+}
+
+enum ContractType {
+  PERSON
+  COMPANY
+}
+
+model Tenant {
+  id String @id @default(cuid())
+
+  fio              String
+  birthDate        DateTime?
+  passportSeries   String?
+  passportNumber   String?
+  passportIssuedBy String?
+  passportCode     String?
+  passportIssuedAt DateTime?
+  regAddress       String?
+  signInitials     String?
+  signSurname      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts Contract[]
+}
+
+model Contract {
+  id String @id @default(cuid())
+
+  number String @unique // "80/2026"
+  year   Int
+  seq    Int
+
+  type ContractType
+
+  propertyCode String
+  property     Property @relation(fields: [propertyCode], references: [code])
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  checkIn  DateTime
+  checkOut DateTime
+  pricePerDayRub Int   @default(0)
+  priceRub Int
+
+  // снимок данных арендатора (чтобы договор фиксировался)
+  tenantName     String?
+  tenantPassport String?
+  tenantAddress  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([year, seq])
+}
