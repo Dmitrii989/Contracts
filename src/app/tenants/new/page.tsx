@@ -4,6 +4,7 @@ import { useState } from "react";
 
 type Payload = {
   fio: string;
+  gender?: "MALE" | "FEMALE" | null;
   birthDate?: string | null;
   passportSeries?: string | null;
   passportNumber?: string | null;
@@ -35,13 +36,15 @@ async function postJson(url: string, body: any) {
 }
 
 const Label = ({ label, children }: { label: string; children: any }) => (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 12, opacity: 0.7 }}>{label}</span>
-      {children}
-    </label>
-  );
+  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <span style={{ fontSize: 12, opacity: 0.7 }}>{label}</span>
+    {children}
+  </label>
+);
+
 export default function NewTenantPage() {
   const [fio, setFio] = useState("");
+  const [gender, setGender] = useState<"" | "MALE" | "FEMALE">("");
   const [birthDate, setBirthDate] = useState("");
   const [passportSeries, setPassportSeries] = useState("");
   const [passportNumber, setPassportNumber] = useState("");
@@ -63,6 +66,7 @@ export default function NewTenantPage() {
 
     const payload: Payload = {
       fio: fio.trim(),
+      gender: gender || null,
       birthDate: birthDate || null,
       passportSeries: passportSeries.trim() || null,
       passportNumber: passportNumber.trim() || null,
@@ -102,8 +106,6 @@ export default function NewTenantPage() {
     minHeight: 80,
     resize: "vertical",
   };
-
-  
 
   return (
     <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
@@ -163,6 +165,18 @@ export default function NewTenantPage() {
             <input value={fio} onChange={(e) => setFio(e.target.value)} style={inputStyle} />
           </Label>
 
+          <Label label="Пол">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as "" | "MALE" | "FEMALE")}
+              style={{ ...inputStyle, background: "white" }}
+            >
+              <option value="">— выбрать пол —</option>
+              <option value="MALE">Мужчина</option>
+              <option value="FEMALE">Женщина</option>
+            </select>
+          </Label>
+
           <Label label="Дата рождения">
             <input
               type="date"
@@ -171,6 +185,8 @@ export default function NewTenantPage() {
               style={inputStyle}
             />
           </Label>
+
+          <div />
 
           <Label label="Серия паспорта">
             <input

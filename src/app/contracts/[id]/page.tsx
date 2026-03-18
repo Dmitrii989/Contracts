@@ -12,6 +12,9 @@ type ContractDetails = {
 
   checkIn: string;
   checkOut: string;
+  contractDate?: string | null;
+  actDate?: string | null;
+  invoiceDate?: string | null;
 
   pricePerDayRub: number | null;
   priceRub: number;
@@ -24,6 +27,23 @@ type ContractDetails = {
   tenantPassportCode: string | null;
   tenantPassportIssuedAt: string | null;
   tenantAddress: string | null;
+
+  companyName?: string | null;
+  companyShortName?: string | null;
+  companyInn?: string | null;
+  companyKpp?: string | null;
+  companyOgrn?: string | null;
+  companyAddress?: string | null;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyBankName?: string | null;
+  companyBankBik?: string | null;
+  companyBankAccount?: string | null;
+  companyCorrespondentAccount?: string | null;
+  companyDirectorName?: string | null;
+  companyDirectorPosition?: string | null;
+  companyDirectorGender?: "MALE" | "FEMALE" | null;
+  companyBasis?: string | null;
 
   createdAt: string;
 };
@@ -148,6 +168,20 @@ export default function ContractPage({
           {contractId ? (
             <>
               <a
+                href={`/contracts/${contractId}/edit`}
+                style={{
+                  padding: "10px 14px",
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  background: "white",
+                }}
+              >
+                Редактировать
+              </a>
+
+              <a
                 href={`/api/contracts/${contractId}/docx`}
                 style={{
                   padding: "10px 14px",
@@ -174,6 +208,34 @@ export default function ContractPage({
               >
                 PDF
               </a>
+
+              <a
+                href={`/api/contracts/${contractId}/act`}
+                style={{
+                  padding: "10px 14px",
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  background: "white",
+                }}
+              >
+                Акт
+              </a>
+
+              <a
+                href={`/api/contracts/${contractId}/invoice`}
+                style={{
+                  padding: "10px 14px",
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  background: "white",
+                }}
+              >
+                Счёт
+              </a>
             </>
           ) : null}
         </div>
@@ -190,6 +252,9 @@ export default function ContractPage({
           <Card title="Основное">
             <Row label="Номер" value={item.number} />
             <Row label="Тип" value={item.type === "PERSON" ? "Физлицо" : "Юрлицо"} />
+            <Row label="Дата договора" value={fmtDate(item.contractDate)} />
+            <Row label="Дата акта" value={fmtDate(item.actDate)} />
+            <Row label="Дата счёта" value={fmtDate(item.invoiceDate)} />
             <Row label="Дата создания" value={fmtDate(item.createdAt)} />
           </Card>
 
@@ -208,15 +273,55 @@ export default function ContractPage({
             <Row label="Итоговая сумма" value={`${money(item.priceRub)} ₽`} />
           </Card>
 
-          <Card title="Арендатор">
-            <Row label="ФИО" value={item.tenantFio} />
-            <Row label="Дата рождения" value={fmtDate(item.tenantBirthDate)} />
-            <Row label="Паспорт" value={item.tenantPassport} />
-            <Row label="Кем выдан" value={item.tenantPassportIssuedBy} />
-            <Row label="Код подразделения" value={item.tenantPassportCode} />
-            <Row label="Дата выдачи" value={fmtDate(item.tenantPassportIssuedAt)} />
-            <Row label="Адрес регистрации" value={item.tenantAddress} />
-          </Card>
+          {item.type === "PERSON" ? (
+            <Card title="Арендатор">
+              <Row label="ФИО" value={item.tenantFio} />
+              <Row label="Дата рождения" value={fmtDate(item.tenantBirthDate)} />
+              <Row label="Паспорт" value={item.tenantPassport} />
+              <Row label="Кем выдан" value={item.tenantPassportIssuedBy} />
+              <Row label="Код подразделения" value={item.tenantPassportCode} />
+              <Row label="Дата выдачи" value={fmtDate(item.tenantPassportIssuedAt)} />
+              <Row label="Адрес регистрации" value={item.tenantAddress} />
+            </Card>
+          ) : (
+            <Card title="Юрлицо">
+              <Row label="Полное наименование" value={item.companyName} />
+              <Row label="Краткое наименование" value={item.companyShortName} />
+              <Row label="ИНН" value={item.companyInn} />
+              <Row label="КПП" value={item.companyKpp} />
+              <Row label="ОГРН" value={item.companyOgrn} />
+              <Row label="Юридический адрес" value={item.companyAddress} />
+              <Row label="Телефон" value={item.companyPhone} />
+              <Row label="Email" value={item.companyEmail} />
+            </Card>
+          )}
+
+          {item.type === "COMPANY" ? (
+            <>
+              <Card title="Подписант">
+                <Row label="ФИО" value={item.companyDirectorName} />
+                <Row label="Должность" value={item.companyDirectorPosition} />
+                <Row
+                  label="Пол"
+                  value={
+                    item.companyDirectorGender === "FEMALE"
+                      ? "Женский"
+                      : item.companyDirectorGender === "MALE"
+                        ? "Мужской"
+                        : "—"
+                  }
+                />
+                <Row label="Основание полномочий" value={item.companyBasis} />
+              </Card>
+
+              <Card title="Банковские реквизиты">
+                <Row label="Банк" value={item.companyBankName} />
+                <Row label="БИК" value={item.companyBankBik} />
+                <Row label="Расчётный счёт" value={item.companyBankAccount} />
+                <Row label="Корреспондентский счёт" value={item.companyCorrespondentAccount} />
+              </Card>
+            </>
+          ) : null}
         </div>
       )}
     </main>

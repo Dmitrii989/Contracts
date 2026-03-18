@@ -9,6 +9,7 @@ export async function GET() {
     include: {
       tenant: true,
       property: true,
+      company: true,
     },
   });
 
@@ -23,11 +24,13 @@ export async function GET() {
     checkIn: c.checkIn,
     checkOut: c.checkOut,
 
-    pricePerDayRub: (c as any).pricePerDayRub ?? null,
+    pricePerDayRub: c.pricePerDayRub ?? null,
     priceRub: c.priceRub,
 
     tenantId: c.tenantId ?? null,
     tenantFio: c.tenant?.fio ?? c.tenantName ?? null,
+
+    companyName: c.companyName ?? c.company?.name ?? null,
 
     createdAt: c.createdAt,
   }));

@@ -27,10 +27,20 @@ enum ContractType {
   COMPANY
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+enum CompanyKind {
+  COMPANY
+  IP
+}
+
 model Tenant {
   id String @id @default(cuid())
 
   fio              String
+  gender           Gender?
   birthDate        DateTime?
   passportSeries   String?
   passportNumber   String?
@@ -45,6 +55,38 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   contracts Contract[]
+}
+
+model Company {
+  id String @id @default(cuid())
+
+  kind CompanyKind @default(COMPANY)
+  name                 String
+  shortName            String?
+  inn                  String?
+  kpp                  String?
+  ogrn                 String?
+  address              String?
+  postalAddress String?
+  email                String?
+  phone                String?
+  bankName             String?
+  bankBik              String?
+  bankAccount          String?
+  correspondentAccount String?
+  directorName         String?
+  directorPosition     String?
+  directorGender       Gender?
+  basis                String?
+  directorPositionGenitive String?
+  directorNameGenitive     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts Contract[]
+
+  @@index([name])
 }
 
 model Contract {
@@ -62,18 +104,49 @@ model Contract {
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id])
 
-  checkIn  DateTime
-  checkOut DateTime
-  pricePerDayRub Int   @default(0)
-  priceRub Int
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  checkIn      DateTime
+  checkOut     DateTime
+  contractDate DateTime?
+  actDate      DateTime?
+  invoiceDate  DateTime?
+
+  pricePerDayRub Int @default(0)
+  priceRub       Int
 
   // снимок данных арендатора (чтобы договор фиксировался)
   tenantName     String?
   tenantPassport String?
   tenantAddress  String?
 
+  // снимок данных юрлица (чтобы договор фиксировался)
+  companyKind CompanyKind?
+  companyName                 String?
+  companyShortName            String?
+  companyInn                  String?
+  companyKpp                  String?
+  companyOgrn                 String?
+  companyAddress              String?
+  companyPostalAddress        String?
+  companyEmail                String?
+  companyPhone                String?
+  companyBankName             String?
+  companyBankBik              String?
+  companyBankAccount          String?
+  companyCorrespondentAccount String?
+  companyDirectorName         String?
+  companyDirectorPosition     String?
+  companyDirectorGender       Gender?
+  companyBasis                String?
+  companyDirectorPositionGenitive String?
+  companyDirectorNameGenitive     String?
+  companyGuestText            String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([year, seq])
+  @@index([companyId])
 }

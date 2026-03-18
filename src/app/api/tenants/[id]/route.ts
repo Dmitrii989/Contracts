@@ -7,6 +7,11 @@ function parseISODate(s: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function parseGender(v: unknown): "MALE" | "FEMALE" | null {
+  if (v === "MALE" || v === "FEMALE") return v;
+  return null;
+}
+
 export async function GET(
   _req: Request,
   ctx: { params: { id: string } }
@@ -63,6 +68,7 @@ export async function PATCH(
       where: { id },
       data: {
         fio,
+        gender: parseGender(body?.gender),
         birthDate: parseISODate(body?.birthDate),
         passportSeries:
           typeof body?.passportSeries === "string"

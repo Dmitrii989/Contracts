@@ -14,6 +14,7 @@ type ContractRow = {
   priceRub: number;
   tenantId: string | null;
   tenantFio: string | null;
+  companyName: string | null;
   createdAt: string;
 };
 
@@ -52,20 +53,23 @@ export default function ContractsPage() {
   }, []);
 
   const GRID = useMemo(
-  () => "120px 90px 130px 1.6fr 110px 110px 170px 160px",
-  []
-);
-const filteredItems = items.filter((c) => {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-
-  return (
-    (c.number || "").toLowerCase().includes(q) ||
-    (c.propertyCode || "").toLowerCase().includes(q) ||
-    (c.propertyAddress || "").toLowerCase().includes(q) ||
-    (c.tenantFio || "").toLowerCase().includes(q)
+    () => "120px 90px 130px 1.6fr 110px 110px 170px 160px",
+    []
   );
-});
+
+  const filteredItems = items.filter((c) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+
+    return (
+      (c.number || "").toLowerCase().includes(q) ||
+      (c.propertyCode || "").toLowerCase().includes(q) ||
+      (c.propertyAddress || "").toLowerCase().includes(q) ||
+      (c.tenantFio || "").toLowerCase().includes(q) ||
+      (c.companyName || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <main style={{ padding: 24, width: "100%", maxWidth: "100%" }}>
       <div
@@ -92,23 +96,25 @@ const filteredItems = items.filter((c) => {
           + Новый договор
         </a>
       </div>
-<div style={{ marginTop: 16 }}>
-  <input
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    placeholder="Поиск по номеру, объекту, адресу, арендатору"
-    style={{
-      width: "100%",
-      maxWidth: 520,
-      height: 40,
-      padding: "0 12px",
-      borderRadius: 10,
-      border: "1px solid #d1d5db",
-      outline: "none",
-      background: "white",
-    }}
-  />
-</div>
+
+      <div style={{ marginTop: 16 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск по номеру, объекту, адресу, арендатору"
+          style={{
+            width: "100%",
+            maxWidth: 520,
+            height: 40,
+            padding: "0 12px",
+            borderRadius: 10,
+            border: "1px solid #d1d5db",
+            outline: "none",
+            background: "white",
+          }}
+        />
+      </div>
+
       {loading ? (
         <div style={{ marginTop: 16 }}>Загрузка...</div>
       ) : err ? (
@@ -127,100 +133,103 @@ const filteredItems = items.filter((c) => {
           }}
         >
           <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: GRID,
-    gap: 0,
-    background: "#fafafa",
-    padding: "10px 12px",
-    fontWeight: 700,
-  }}
->
+            style={{
+              display: "grid",
+              gridTemplateColumns: GRID,
+              gap: 0,
+              background: "#fafafa",
+              padding: "10px 12px",
+              fontWeight: 700,
+            }}
+          >
             <div>Номер</div>
             <div>Тип</div>
             <div>Объект</div>
-            <div>Арендатор</div>
+            <div>Арендатор / юрлицо</div>
             <div>Заезд</div>
             <div>Выезд</div>
             <div>Сумма</div>
             <div>Файлы</div>
           </div>
 
-          {filteredItems.map((c) => (
-  <div
-    key={c.id}
-    style={{
-      display: "grid",
-      gridTemplateColumns: GRID,
-      padding: "10px 12px",
-      borderTop: "1px solid #eee",
-      alignItems: "center",
-      cursor: "pointer",
-      transition: "background 0.2s ease",
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = "#e5e7eb";
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = "white";
-    }}
-    onClick={() => {
-      window.location.href = `/contracts/${c.id}`;
-    }}
-  >
-              <div style={{ fontWeight: 800 }}>{c.number}</div>
+          {filteredItems.map((c) => {
+            const counterparty =
+              c.type === "COMPANY" ? c.companyName || "—" : c.tenantFio || "—";
 
-              <div>{c.type === "PERSON" ? "Физик" : "Юрлицо"}</div>
+            return (
+              <div
+                key={c.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: GRID,
+                  padding: "10px 12px",
+                  borderTop: "1px solid #eee",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  transition: "background 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#e5e7eb";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "white";
+                }}
+                onClick={() => {
+                  window.location.href = `/contracts/${c.id}`;
+                }}
+              >
+                <div style={{ fontWeight: 800 }}>{c.number}</div>
 
-              <div title={c.propertyAddress ?? ""}>{c.propertyCode}</div>
+                <div>{c.type === "PERSON" ? "Физик" : "Юрлицо"}</div>
 
-              <div style={{ fontWeight: 600 }}>
-                {c.tenantFio ?? "—"}
+                <div title={c.propertyAddress ?? ""}>{c.propertyCode}</div>
+
+                <div style={{ fontWeight: 600 }}>{counterparty}</div>
+
+                <div>{fmtDate(c.checkIn)}</div>
+                <div>{fmtDate(c.checkOut)}</div>
+
+                <div>
+                  {Number(c.priceRub || 0).toLocaleString("ru-RU")} ₽
+                  {c.pricePerDayRub && c.pricePerDayRub > 0 ? (
+                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
+                      ({c.pricePerDayRub.toLocaleString("ru-RU")} ₽/сут)
+                    </span>
+                  ) : null}
+                </div>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <a
+                    href={`/api/contracts/${c.id}/docx`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      padding: "6px 10px",
+                      border: "1px solid #ddd",
+                      borderRadius: 8,
+                      textDecoration: "none",
+                      fontSize: 13,
+                    }}
+                  >
+                    DOCX
+                  </a>
+
+                  <a
+                    href={`/api/contracts/${c.id}/pdf`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      padding: "6px 10px",
+                      border: "1px solid #ddd",
+                      borderRadius: 8,
+                      textDecoration: "none",
+                      fontSize: 13,
+                    }}
+                  >
+                    PDF
+                  </a>
+                </div>
               </div>
-
-              <div>{fmtDate(c.checkIn)}</div>
-              <div>{fmtDate(c.checkOut)}</div>
-
-              <div>
-                {Number(c.priceRub || 0).toLocaleString("ru-RU")} ₽
-                {c.pricePerDayRub && c.pricePerDayRub > 0 ? (
-                  <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
-                    ({c.pricePerDayRub.toLocaleString("ru-RU")} ₽/сут)
-                  </span>
-                ) : null}
-              </div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <a
-                  href={`/api/contracts/${c.id}/docx`}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    padding: "6px 10px",
-                    border: "1px solid #ddd",
-                    borderRadius: 8,
-                    textDecoration: "none",
-                    fontSize: 13,
-                  }}
-                >
-                  DOCX
-                </a>
-
-                <a
-                  href={`/api/contracts/${c.id}/pdf`}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    padding: "6px 10px",
-                    border: "1px solid #ddd",
-                    borderRadius: 8,
-                    textDecoration: "none",
-                    fontSize: 13,
-                  }}
-                >
-                  PDF
-                </a>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>

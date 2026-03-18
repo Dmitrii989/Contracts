@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 type Tenant = {
   id: string;
   fio: string;
+  gender?: "MALE" | "FEMALE" | null;
   birthDate?: string | null;
   passportSeries?: string | null;
   passportNumber?: string | null;
@@ -51,6 +52,7 @@ export default function EditTenantPage({
   const [tenantId, setTenantId] = useState("");
 
   const [fio, setFio] = useState("");
+  const [gender, setGender] = useState<"" | "MALE" | "FEMALE">("");
   const [birthDate, setBirthDate] = useState("");
   const [passportSeries, setPassportSeries] = useState("");
   const [passportNumber, setPassportNumber] = useState("");
@@ -79,6 +81,7 @@ export default function EditTenantPage({
         const data: Tenant = await r.json();
 
         setFio(data.fio || "");
+        setGender(data.gender || "");
         setBirthDate(toInputDate(data.birthDate));
         setPassportSeries(data.passportSeries || "");
         setPassportNumber(data.passportNumber || "");
@@ -106,6 +109,7 @@ export default function EditTenantPage({
     try {
       await patchJson(`/api/tenants/${tenantId}`, {
         fio: fio.trim(),
+        gender: gender || null,
         birthDate: birthDate || null,
         passportSeries: passportSeries.trim() || null,
         passportNumber: passportNumber.trim() || null,
@@ -189,9 +193,24 @@ export default function EditTenantPage({
             </label>
 
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>Пол</span>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as "" | "MALE" | "FEMALE")}
+                style={{ ...inputStyle, background: "white" }}
+              >
+                <option value="">— выбрать пол —</option>
+                <option value="MALE">Мужчина</option>
+                <option value="FEMALE">Женщина</option>
+              </select>
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ fontSize: 12, opacity: 0.7 }}>Дата рождения</span>
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} style={inputStyle} />
             </label>
+
+            <div />
 
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ fontSize: 12, opacity: 0.7 }}>Серия паспорта</span>

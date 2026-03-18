@@ -7,6 +7,11 @@ function parseISODate(s: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function parseGender(v: unknown): "MALE" | "FEMALE" | null {
+  if (v === "MALE" || v === "FEMALE") return v;
+  return null;
+}
+
 export async function GET() {
   const items = await prisma.tenant.findMany({
     orderBy: { createdAt: "desc" },
@@ -34,6 +39,7 @@ export async function POST(req: Request) {
     const created = await prisma.tenant.create({
       data: {
         fio,
+        gender: parseGender(body?.gender),
         birthDate: parseISODate(body?.birthDate),
         passportSeries:
           typeof body?.passportSeries === "string"
