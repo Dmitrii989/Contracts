@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import TableCard from "@/components/ui/TableCard";
+import {
+  pageMainStyle,
+  pageHeaderStyle,
+  pageHeaderActionsStyle,
+  secondaryButtonStyle,
+  primaryButtonStyle,
+} from "@/components/ui/styles";
 
 function fmtDate(date: Date | null | undefined) {
   if (!date) return "—";
@@ -12,86 +20,72 @@ export default async function CompaniesPage() {
   });
 
   return (
-    <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 18,
-        }}
-      >
+    <main style={pageMainStyle}>
+      <div style={{ ...pageHeaderStyle, marginBottom: 18 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 34 }}>Юрлица</h1>
+          <h1 style={{ margin: 0, fontSize: 34 }}>Компании</h1>
           <div style={{ marginTop: 6, fontSize: 13, opacity: 0.7 }}>
             Справочник контрагентов для договоров по юрлицу
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link
-            href="/contracts"
-            style={{
-              padding: "10px 14px",
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              textDecoration: "none",
-              fontWeight: 700,
-              background: "white",
-              color: "#111827",
-            }}
-          >
-            ← К договорам
+        <div style={pageHeaderActionsStyle}>
+          <Link href="/contracts" style={secondaryButtonStyle}>
+            Договоры
           </Link>
 
-          <Link
-            href="/companies/new"
-            style={{
-              padding: "10px 14px",
-              border: "1px solid #111827",
-              borderRadius: 10,
-              textDecoration: "none",
-              fontWeight: 700,
-              background: "#111827",
-              color: "white",
-            }}
-          >
-            + Новое юрлицо
+          <Link href="/companies/new" style={primaryButtonStyle}>
+            + Новая компания
           </Link>
         </div>
       </div>
 
-      <section
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 16,
-          background: "white",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-          overflow: "hidden",
-        }}
-      >
+      <TableCard>
         {companies.length === 0 ? (
           <div style={{ padding: 20, fontSize: 14, opacity: 0.8 }}>
-            Юрлиц пока нет.
+            Компаний пока нет.
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 14,
+              }}
+            >
               <thead>
                 <tr style={{ background: "#f9fafb", textAlign: "left" }}>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Наименование</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>ИНН</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>КПП</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>ОГРН</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Подписант</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Создано</th>
-                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb", width: 160 }}>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    Наименование
+                  </th>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    ИНН
+                  </th>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    КПП
+                  </th>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    ОГРН
+                  </th>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    Подписант
+                  </th>
+                  <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                    Создано
+                  </th>
+                  <th
+                    style={{
+                      padding: 12,
+                      borderBottom: "1px solid #e5e7eb",
+                      width: 170,
+                    }}
+                  >
                     Действия
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 {companies.map((company) => (
                   <tr key={company.id}>
@@ -117,7 +111,9 @@ export default async function CompaniesPage() {
                     </td>
 
                     <td style={{ padding: 12, borderBottom: "1px solid #f1f5f9" }}>
-                      {[company.directorPosition, company.directorName].filter(Boolean).join(" ") || "—"}
+                      {[company.directorPosition, company.directorName]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
                     </td>
 
                     <td style={{ padding: 12, borderBottom: "1px solid #f1f5f9" }}>
@@ -125,18 +121,17 @@ export default async function CompaniesPage() {
                     </td>
 
                     <td style={{ padding: 12, borderBottom: "1px solid #f1f5f9" }}>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "nowrap",
+                          alignItems: "center",
+                        }}
+                      >
                         <Link
                           href={`/companies/${company.id}/edit`}
-                          style={{
-                            padding: "8px 10px",
-                            border: "1px solid #ddd",
-                            borderRadius: 8,
-                            textDecoration: "none",
-                            fontWeight: 700,
-                            background: "white",
-                            color: "#111827",
-                          }}
+                          style={secondaryButtonStyle}
                         >
                           Редактировать
                         </Link>
@@ -148,7 +143,7 @@ export default async function CompaniesPage() {
             </table>
           </div>
         )}
-      </section>
+      </TableCard>
     </main>
   );
 }

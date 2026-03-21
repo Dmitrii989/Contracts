@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Property = {
   id: string;
   code: string;
   address?: string | null;
+  isActive?: boolean;
 };
 
 type Tenant = {
@@ -49,7 +50,7 @@ type Company = {
 
 type ContractFormData = {
   type: "PERSON" | "COMPANY";
-  propertyCode: string;
+  propertyId: string;
   checkIn: string;
   checkOut: string;
   contractDate?: string;
@@ -114,7 +115,7 @@ function money(n: number) {
   return v.toLocaleString("ru-RU");
 }
 
-async function sendJson(url: string, method: "POST" | "PUT", body: any) {
+async function sendJson(url: string, method: "POST" | "PUT", body: ContractFormData) {
   const r = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
@@ -122,14 +123,15 @@ async function sendJson(url: string, method: "POST" | "PUT", body: any) {
   });
 
   const text = await r.text();
-  let json: any = null;
+  let json: unknown = null;
 
   try {
     json = text ? JSON.parse(text) : null;
   } catch {}
 
   if (!r.ok) {
-    const details = json ? JSON.stringify(json) : text;
+    const details =
+      typeof json === "object" && json !== null ? JSON.stringify(json) : text;
     throw new Error(`HTTP ${r.status}: ${details}`);
   }
 
@@ -177,7 +179,7 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
   const [companies, setCompanies] = useState<Company[]>([]);
 
   const [type, setType] = useState<"PERSON" | "COMPANY">(initialData?.type ?? "PERSON");
-  const [propertyCode, setPropertyCode] = useState<string>(initialData?.propertyCode ?? "");
+  const [propertyId, setPropertyId] = useState<string>(initialData?.propertyId ?? "");
   const [tenantId, setTenantId] = useState<string>(initialData?.tenantId ?? "");
   const [companyId, setCompanyId] = useState<string>(initialData?.companyId ?? "");
   const [companyKind, setCompanyKind] = useState<"COMPANY" | "IP">(
@@ -208,8 +210,8 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
     initialData?.companyAddress ?? ""
   );
   const [companyPostalAddress, setCompanyPostalAddress] = useState<string>(
-  initialData?.companyPostalAddress ?? ""
-);
+    initialData?.companyPostalAddress ?? ""
+  );
   const [companyEmail, setCompanyEmail] = useState<string>(initialData?.companyEmail ?? "");
   const [companyPhone, setCompanyPhone] = useState<string>(initialData?.companyPhone ?? "");
   const [companyBankName, setCompanyBankName] = useState<string>(
@@ -231,62 +233,66 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
     initialData?.companyDirectorPosition ?? "Генеральный директор"
   );
   const [companyDirectorPositionGenitive, setCompanyDirectorPositionGenitive] = useState<string>(
-  initialData?.companyDirectorPositionGenitive ?? ""
-);
+    initialData?.companyDirectorPositionGenitive ?? ""
+  );
   const [companyDirectorGender, setCompanyDirectorGender] = useState<"MALE" | "FEMALE">(
     initialData?.companyDirectorGender ?? "MALE"
   );
   const [companyDirectorNameGenitive, setCompanyDirectorNameGenitive] = useState<string>(
-  initialData?.companyDirectorNameGenitive ?? ""
-);
+    initialData?.companyDirectorNameGenitive ?? ""
+  );
   const [companyBasis, setCompanyBasis] = useState<string>(
     initialData?.companyBasis ?? "Устава"
   );
   const [companyGuestText, setCompanyGuestText] = useState<string>(
-  initialData?.companyGuestText ?? ""
-);
+    initialData?.companyGuestText ?? ""
+  );
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
+  const lastAppliedCompanyIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-  (async () => {
-    setMsg("");
+    (async () => {
+      setMsg("");
 
-    try {
-      const rp = await fetch("/api/properties", { cache: "no-store" });
-      if (rp.ok) {
-        const data = await rp.json();
-        const arr = Array.isArray(data) ? data : [];
-        setProperties(arr);
+      try {
+        const rp = await fetch("/api/properties", { cache: "no-store" });
+        if (rp.ok) {
+          const data = await rp.json();
+          const arr = Array.isArray(data) ? data : [];
+          setProperties(arr);
 
-        if (!propertyCode && arr.length > 0) {
-          setPropertyCode(arr[0].code);
+          const activeArr = arr.filter((p: Property) => p.isActive !== false);
+
+          if (!propertyId && activeArr.length > 0) {
+            setPropertyId(activeArr[0].id);
+          }
         }
-      }
-    } catch {}
+      } catch {}
 
-    try {
-      const rt = await fetch("/api/tenants", { cache: "no-store" });
-      if (rt.ok) {
-        const data = await rt.json();
-        setTenants(Array.isArray(data) ? data : []);
-      }
-    } catch {}
+      try {
+        const rt = await fetch("/api/tenants", { cache: "no-store" });
+        if (rt.ok) {
+          const data = await rt.json();
+          setTenants(Array.isArray(data) ? data : []);
+        }
+      } catch {}
 
-    try {
-      const rc = await fetch("/api/companies", { cache: "no-store" });
-      if (rc.ok) {
-        const data = await rc.json();
-        setCompanies(Array.isArray(data) ? data : []);
-      }
-    } catch {}
-  })();
-}, []);
+      try {
+        const rc = await fetch("/api/companies", { cache: "no-store" });
+        if (rc.ok) {
+          const data = await rc.json();
+          setCompanies(Array.isArray(data) ? data : []);
+        }
+      } catch {}
+    })();
+  }, [propertyId]);
 
   const selectedProperty = useMemo(
-    () => properties.find((p) => p.code === propertyCode) ?? null,
-    [properties, propertyCode]
+    () => properties.find((p) => p.id === propertyId) ?? null,
+    [properties, propertyId]
   );
 
   const selectedTenant = useMemo(
@@ -299,9 +305,32 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
     [companies, companyId]
   );
 
+  const propertyOptions = useMemo(() => {
+    const active = properties.filter((p) => p.isActive !== false);
+
+    if (!propertyId) return active;
+
+    const selected = properties.find((p) => p.id === propertyId);
+    if (!selected) return active;
+
+    const alreadyIncluded = active.some((p) => p.id === selected.id);
+    if (alreadyIncluded) return active;
+
+    return [selected, ...active];
+  }, [properties, propertyId]);
+
   useEffect(() => {
     if (type !== "COMPANY") return;
     if (!selectedCompany) return;
+
+    const companyChanged = lastAppliedCompanyIdRef.current !== selectedCompany.id;
+
+    if (!companyChanged) return;
+
+    if (mode === "edit" && lastAppliedCompanyIdRef.current === null) {
+      lastAppliedCompanyIdRef.current = selectedCompany.id;
+      return;
+    }
 
     setCompanyKind(selectedCompany.kind ?? "COMPANY");
     setCompanyName(selectedCompany.name ?? "");
@@ -320,14 +349,16 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
     setCompanyDirectorName(selectedCompany.directorName ?? "");
     setCompanyDirectorPosition(
       selectedCompany.directorPosition ??
-        (selectedCompany.kind === "IP" ? "Индивидуальный предприниматель" : "Генеральный директор")
+        (selectedCompany.kind === "IP"
+          ? "Индивидуальный предприниматель"
+          : "Генеральный директор")
     );
     setCompanyDirectorPositionGenitive(
-  selectedCompany.directorPositionGenitive ??
-    (selectedCompany.kind === "IP"
-      ? "Индивидуального предпринимателя"
-      : "Генерального директора")
-);
+      selectedCompany.directorPositionGenitive ??
+        (selectedCompany.kind === "IP"
+          ? "Индивидуального предпринимателя"
+          : "Генерального директора")
+    );
     setCompanyDirectorGender(selectedCompany.directorGender ?? "MALE");
     setCompanyDirectorNameGenitive(selectedCompany.directorNameGenitive ?? "");
     setCompanyBasis(
@@ -336,7 +367,9 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
           ? "государственной регистрации в качестве индивидуального предпринимателя"
           : "Устава")
     );
-  }, [type, selectedCompany]);
+
+    lastAppliedCompanyIdRef.current = selectedCompany.id;
+  }, [type, mode, selectedCompany]);
 
   const days = useMemo(() => daysBetweenISO(checkIn, checkOut), [checkIn, checkOut]);
 
@@ -346,28 +379,28 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
   }, [days, pricePerDayRub]);
 
   const canSave = useMemo(() => {
-    if (!propertyCode) return false;
+    if (!propertyId) return false;
     if (!checkIn || !checkOut) return false;
     if (days <= 0) return false;
     if (!pricePerDayRub || pricePerDayRub <= 0) return false;
     if (type === "PERSON" && !tenantId) return false;
     if (type === "COMPANY" && !companyId) return false;
     return true;
-  }, [propertyCode, checkIn, checkOut, days, pricePerDayRub, type, tenantId, companyId]);
+  }, [propertyId, checkIn, checkOut, days, pricePerDayRub, type, tenantId, companyId]);
 
   async function saveContract() {
     setMsg("");
 
-    if (!propertyCode) return setMsg("Выбери объект (квартиру).");
+    if (!propertyId) return setMsg("Выбери объект.");
     if (!checkIn || !checkOut) return setMsg("Заполни даты заезда/выезда.");
     if (days <= 0) return setMsg("Дата выезда должна быть позже даты заезда.");
     if (!pricePerDayRub || pricePerDayRub <= 0) return setMsg("Укажи цену за сутки (₽).");
-    if (type === "PERSON" && !tenantId) return setMsg("Выбери арендатора (Tenant).");
+    if (type === "PERSON" && !tenantId) return setMsg("Выбери арендатора.");
     if (type === "COMPANY" && !companyId) return setMsg("Выбери юрлицо.");
 
     const payload: ContractFormData = {
       type,
-      propertyCode,
+      propertyId,
       checkIn,
       checkOut,
       contractDate,
@@ -404,14 +437,15 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
       companyBankName: type === "COMPANY" ? companyBankName || null : null,
       companyBankBik: type === "COMPANY" ? companyBankBik || null : null,
       companyBankAccount: type === "COMPANY" ? companyBankAccount || null : null,
-      companyCorrespondentAccount: type === "COMPANY" ? companyCorrespondentAccount || null : null,
+      companyCorrespondentAccount:
+        type === "COMPANY" ? companyCorrespondentAccount || null : null,
       companyDirectorName: type === "COMPANY" ? companyDirectorName || null : null,
       companyDirectorPosition: type === "COMPANY" ? companyDirectorPosition || null : null,
       companyDirectorPositionGenitive:
-  type === "COMPANY" ? companyDirectorPositionGenitive || null : null,
+        type === "COMPANY" ? companyDirectorPositionGenitive || null : null,
       companyDirectorGender: type === "COMPANY" ? companyDirectorGender || null : null,
       companyDirectorNameGenitive:
-  type === "COMPANY" ? companyDirectorNameGenitive || null : null,
+        type === "COMPANY" ? companyDirectorNameGenitive || null : null,
       companyBasis: type === "COMPANY" ? companyBasis || null : null,
       companyGuestText: type === "COMPANY" ? companyGuestText.trim() || null : null,
     };
@@ -435,8 +469,8 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
           window.location.href = `/contracts/${contractId}`;
         }, 300);
       }
-    } catch (e: any) {
-      setMsg(`Ошибка: ${e?.message ?? String(e)}`);
+    } catch (e: unknown) {
+      setMsg(`Ошибка: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setSaving(false);
     }
@@ -497,7 +531,7 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
         style={{
           marginTop: 18,
           display: "grid",
-          gridTemplateColumns: "4fr 1fr",
+          gridTemplateColumns: "minmax(0, 1fr) 320px",
           gap: 24,
           alignItems: "start",
         }}
@@ -548,20 +582,91 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
                 alignItems: "end",
               }}
             >
-              <Label label="Объект (квартира)">
-                <select
-                  value={propertyCode}
-                  onChange={(e) => setPropertyCode(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="">— выбрать объект —</option>
-                  {properties.map((p) => (
-                    <option key={p.id} value={p.code}>
-                      {p.code}
-                      {p.address ? ` — ${p.address}` : ""}
-                    </option>
-                  ))}
-                </select>
+              <Label label="Объект">
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <select
+                    value={propertyId}
+                    onChange={(e) => setPropertyId(e.target.value)}
+                    style={{ ...selectStyle, flex: 1, minWidth: 260 }}
+                  >
+                    <option value="">— выбрать объект —</option>
+                    {propertyOptions.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code}
+                        {p.address ? ` — ${p.address}` : ""}
+                        {p.isActive === false ? " (неактивный)" : ""}
+                      </option>
+                    ))}
+                  </select>
+
+                  <a
+                    href="/properties/new"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      height: 38,
+                      padding: "0 12px",
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      background: "white",
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 700,
+                      color: "#111827",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    + Новый
+                  </a>
+
+                  <a
+                    href="/properties"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      height: 38,
+                      padding: "0 12px",
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      background: "white",
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 700,
+                      color: "#111827",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Список
+                  </a>
+
+                  {propertyId ? (
+                    <a
+                      href={`/properties/${propertyId}/edit`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        height: 38,
+                        padding: "0 12px",
+                        borderRadius: 10,
+                        border: "1px solid #d1d5db",
+                        background: "white",
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                        color: "#111827",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Ред.
+                    </a>
+                  ) : null}
+                </div>
               </Label>
 
               {type === "PERSON" ? (
@@ -739,21 +844,24 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
                   </div>
                 </Label>
               )}
-              <Label label="Работник(и) для проживания (в нужной форме)">
-  <textarea
-    value={companyGuestText}
-    onChange={(e) => setCompanyGuestText(e.target.value)}
-    style={{
-      minHeight: 90,
-      padding: "10px",
-      borderRadius: 10,
-      border: "1px solid #d1d5db",
-      outline: "none",
-      resize: "vertical",
-    }}
-    placeholder="Например: Иванова Ильи Александровича, Петрова Константина Сергеевича"
-  />
-</Label>
+
+              {type === "COMPANY" ? (
+                <Label label="Работник(и) для проживания (в нужной форме)">
+                  <textarea
+                    value={companyGuestText}
+                    onChange={(e) => setCompanyGuestText(e.target.value)}
+                    style={{
+                      minHeight: 90,
+                      padding: "10px",
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      outline: "none",
+                      resize: "vertical",
+                    }}
+                    placeholder="Например: Иванова Ильи Александровича, Петрова Константина Сергеевича"
+                  />
+                </Label>
+              ) : null}
             </div>
 
             <div
@@ -767,8 +875,8 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
             >
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>Подсказка</div>
               <div style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.35 }}>
-                Объекты берутся из <b>/api/properties</b>, арендаторы — из <b>/api/tenants</b>,
-                юрлица — из <b>/api/companies</b>.
+                Объекты берутся из раздела <b>Объекты</b>, арендаторы — из <b>Арендаторов</b>,
+                юрлица — из <b>Компаний</b>.
               </div>
             </div>
           </Card>
@@ -852,16 +960,20 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
 
               <div
                 style={{
-                  padding: 12,
-                  borderRadius: 14,
-                  border: "1px solid #e5e7eb",
-                  background: "white",
+                  padding: 16,
+                  borderRadius: 16,
+                  border: "1px solid #dbeafe",
+                  background: "#eff6ff",
                 }}
               >
-                <div style={{ fontSize: 12, opacity: 0.7 }}>Итоговая сумма (в договор)</div>
-                <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>{money(totalRub)} ₽</div>
-                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
-                  = {money(pricePerDayRub)} ₽ × {days} суток
+                <div style={{ fontSize: 12, opacity: 0.7, textTransform: "uppercase" }}>
+                  Итоговая сумма
+                </div>
+                <div style={{ fontSize: 34, fontWeight: 900, marginTop: 6, lineHeight: 1 }}>
+                  {money(totalRub)} ₽
+                </div>
+                <div style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
+                  {money(pricePerDayRub)} ₽ × {days} суток
                 </div>
               </div>
             </div>
@@ -869,42 +981,77 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
         </div>
 
         <div style={{ position: "sticky", top: 20, display: "grid", gap: 16 }}>
-          <Card title="Предпросмотр данных (что попадёт в договор)">
-            <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-              <div>
-                <b>Тип:</b> {type === "PERSON" ? "Физлицо" : "Юрлицо"}
+          <Card title="Предпросмотр данных">
+            <div style={{ display: "grid", gap: 14, fontSize: 13, lineHeight: 1.45 }}>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: 0.65, textTransform: "uppercase", marginBottom: 6 }}>
+                  Тип договора
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>
+                  {type === "PERSON" ? "Физлицо" : "Юрлицо"}
+                </div>
               </div>
 
-              <div style={{ marginTop: 8 }}>
-                <b>Объект:</b> {propertyCode || "—"}
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "white",
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: 0.65, textTransform: "uppercase", marginBottom: 6 }}>
+                  Объект
+                </div>
+                <div style={{ fontWeight: 800 }}>{selectedProperty?.code || "—"}</div>
+                <div style={{ marginTop: 4, opacity: 0.8 }}>{selectedProperty?.address || "—"}</div>
               </div>
-              <div style={{ opacity: 0.8 }}>{selectedProperty?.address ?? ""}</div>
 
               {type === "PERSON" ? (
-                <>
-                  <div style={{ marginTop: 8 }}>
-                    <b>Арендатор:</b> {selectedTenant?.fio ?? "—"}
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #e5e7eb",
+                    background: "white",
+                  }}
+                >
+                  <div style={{ fontSize: 11, opacity: 0.65, textTransform: "uppercase", marginBottom: 6 }}>
+                    Арендатор
                   </div>
-
-                  {selectedTenant ? (
-                    <div style={{ marginTop: 6, opacity: 0.85 }}>
-                      <div>
-                        <b>Паспорт:</b>{" "}
-                        {[selectedTenant.passportSeries, selectedTenant.passportNumber]
-                          .filter(Boolean)
-                          .join(" ") || "—"}
-                      </div>
-                      <div>
-                        <b>Регистрация:</b> {selectedTenant.regAddress ?? "—"}
-                      </div>
+                  <div style={{ fontWeight: 800 }}>{selectedTenant?.fio || "—"}</div>
+                  <div style={{ marginTop: 6, opacity: 0.85 }}>
+                    <div>
+                      <b>Паспорт:</b>{" "}
+                      {[selectedTenant?.passportSeries, selectedTenant?.passportNumber]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
                     </div>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <div style={{ marginTop: 8 }}>
-                    <b>{companyKind === "IP" ? "ИП" : "Юрлицо"}:</b> {companyName || "—"}
+                    <div>
+                      <b>Регистрация:</b> {selectedTenant?.regAddress || "—"}
+                    </div>
                   </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #e5e7eb",
+                    background: "white",
+                  }}
+                >
+                  <div style={{ fontSize: 11, opacity: 0.65, textTransform: "uppercase", marginBottom: 6 }}>
+                    Контрагент
+                  </div>
+                  <div style={{ fontWeight: 800 }}>{companyName || "—"}</div>
                   <div style={{ marginTop: 6, opacity: 0.85 }}>
                     <div>
                       <b>{companyKind === "IP" ? "ИНН" : "ИНН / КПП"}:</b>{" "}
@@ -923,85 +1070,116 @@ export default function ContractForm({ mode, contractId, initialData }: Contract
                       <b>Основание:</b> {companyBasis || "—"}
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
-              <div style={{ marginTop: 10 }}>
-                <b>Срок:</b> {fmtDateForPreview(checkIn)} → {fmtDateForPreview(checkOut)} ({days} суток)
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: 0.65, textTransform: "uppercase", marginBottom: 6 }}>
+                  Срок
+                </div>
+                <div style={{ fontWeight: 800 }}>
+                  {fmtDateForPreview(checkIn)} → {fmtDateForPreview(checkOut)}
+                </div>
+                <div style={{ marginTop: 4, opacity: 0.8 }}>{days} суток</div>
+                <div style={{ marginTop: 8 }}>
+                  <b>Дата договора:</b> {fmtDateForPreview(contractDate)}
+                </div>
+                <div>
+                  <b>Дата акта:</b> {fmtDateForPreview(actDate)}
+                </div>
+                <div>
+                  <b>Дата счёта:</b> {fmtDateForPreview(invoiceDate)}
+                </div>
               </div>
 
-              <div style={{ marginTop: 6 }}>
-                <b>Дата договора:</b> {fmtDateForPreview(contractDate)}
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <b>Дата акта:</b> {fmtDateForPreview(actDate)}
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <b>Дата счёта:</b> {fmtDateForPreview(invoiceDate)}
-              </div>
-
-              <div style={{ marginTop: 6 }}>
-                <b>Цена:</b> {money(pricePerDayRub)} ₽/сут, итог {money(totalRub)} ₽
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1px solid #dbeafe",
+                  background: "#eff6ff",
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: 0.7, textTransform: "uppercase", marginBottom: 6 }}>
+                  Итог
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1 }}>
+                  {money(totalRub)} ₽
+                </div>
+                <div style={{ marginTop: 6, opacity: 0.75 }}>
+                  {money(pricePerDayRub)} ₽ × {days} суток
+                </div>
               </div>
             </div>
           </Card>
 
           <Card title={mode === "create" ? "Создание" : "Сохранение"}>
-            <button
-              type="button"
-              onClick={saveContract}
-              disabled={saving || !canSave}
-              style={{
-                height: 44,
-                width: "100%",
-                borderRadius: 14,
-                border: "1px solid #111827",
-                background: saving || !canSave ? "#9ca3af" : "#111827",
-                color: "white",
-                cursor: saving || !canSave ? "not-allowed" : "pointer",
-                fontWeight: 900,
-                fontSize: 14,
-              }}
-            >
-              {saving
-                ? mode === "create"
-                  ? "Создаю…"
-                  : "Сохраняю…"
-                : mode === "create"
-                  ? "Создать договор"
-                  : "Сохранить изменения"}
-            </button>
-
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75, lineHeight: 1.35 }}>
-              {mode === "create" ? (
-                <>
-                  После создания договор появится в списке. Там же будут кнопки <b>DOCX</b> и{" "}
-                  <b>PDF</b>.
-                </>
-              ) : (
-                <>
-                  После сохранения можно заново сформировать <b>DOCX</b> и <b>PDF</b> из карточки
-                  договора.
-                </>
-              )}
-            </div>
-
-            {msg ? (
-              <div
+            <div style={{ display: "grid", gap: 12 }}>
+              <button
+                type="button"
+                onClick={saveContract}
+                disabled={saving || !canSave}
                 style={{
-                  marginTop: 12,
-                  padding: 10,
-                  borderRadius: 12,
-                  background: msg.startsWith("✅") ? "#ecfdf5" : "#fff7ed",
-                  border: "1px solid " + (msg.startsWith("✅") ? "#a7f3d0" : "#fed7aa"),
-                  color: msg.startsWith("✅") ? "#065f46" : "#9a3412",
-                  fontSize: 13,
-                  whiteSpace: "pre-wrap",
+                  height: 54,
+                  width: "100%",
+                  borderRadius: 16,
+                  border: "1px solid #111827",
+                  background: saving || !canSave ? "#9ca3af" : "#111827",
+                  color: "white",
+                  cursor: saving || !canSave ? "not-allowed" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 16,
+                  boxShadow: saving || !canSave ? "none" : "0 8px 20px rgba(17,24,39,0.18)",
                 }}
               >
-                {msg}
+                {saving
+                  ? mode === "create"
+                    ? "Сохраняю договор…"
+                    : "Сохраняю изменения…"
+                  : mode === "create"
+                    ? "Сохранить договор"
+                    : "Сохранить изменения"}
+              </button>
+
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  opacity: 0.8,
+                }}
+              >
+                {mode === "create"
+                  ? "После сохранения договор появится в списке. Оттуда можно открыть карточку и сформировать DOCX, PDF, акт и счёт."
+                  : "После сохранения можно заново сформировать DOCX, PDF, акт и счёт из карточки договора."}
               </div>
-            ) : null}
+
+              {msg ? (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 12,
+                    background: msg.startsWith("✅") ? "#ecfdf5" : "#fff7ed",
+                    border: "1px solid " + (msg.startsWith("✅") ? "#a7f3d0" : "#fed7aa"),
+                    color: msg.startsWith("✅") ? "#065f46" : "#9a3412",
+                    fontSize: 13,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {msg}
+                </div>
+              ) : null}
+            </div>
           </Card>
         </div>
       </div>

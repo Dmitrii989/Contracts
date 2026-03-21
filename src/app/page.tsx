@@ -1,66 +1,54 @@
-import Image from "next/image";
-import styles from "./page.module.css";
-
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main
+      style={{
+        padding: 24,
+        maxWidth: 900,
+        margin: "0 auto",
+      }}
+    >
+      <h1 style={{ fontSize: 36, marginBottom: 20 }}>
+        Contracts CRM
+      </h1>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+        }}
+      >
+        <a href="/contracts" style={card}>
+          <h2>Договоры</h2>
+          <p>Создание, список, DOCX и PDF</p>
+        </a>
+
+        <a href="/properties" style={card}>
+          <h2>Объекты</h2>
+          <p>Квартиры, помещения, адреса</p>
+        </a>
+
+        <a href="/tenants" style={card}>
+          <h2>Арендаторы</h2>
+          <p>Физлица</p>
+        </a>
+
+        <a href="/companies" style={card}>
+          <h2>Компании</h2>
+          <p>Юрлица и ИП</p>
+        </a>
+      </div>
+    </main>
   );
 }
+
+const card: React.CSSProperties = {
+  display: "block",
+  padding: 20,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "#111827",
+  background: "white",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+};

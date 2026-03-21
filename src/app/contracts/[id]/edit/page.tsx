@@ -31,14 +31,17 @@ export default async function EditContractPage({
       contractId={contract.id}
       initialData={{
         type: contract.type,
-        propertyCode: contract.propertyCode,
+        propertyId: contract.propertyId ?? "",
+
         tenantId: contract.tenantId ?? "",
         companyId: contract.companyId ?? "",
+
         checkIn: toYmd(contract.checkIn),
         checkOut: toYmd(contract.checkOut),
         contractDate: toYmd(contract.contractDate ?? contract.createdAt),
         actDate: toYmd(contract.actDate ?? contract.contractDate ?? contract.createdAt),
         invoiceDate: toYmd(contract.invoiceDate ?? contract.contractDate ?? contract.createdAt),
+
         pricePerDayRub: contract.pricePerDayRub,
         priceRub: contract.priceRub,
 
@@ -46,12 +49,14 @@ export default async function EditContractPage({
         tenantPassport: contract.tenantPassport ?? "",
         tenantAddress: contract.tenantAddress ?? "",
 
+        companyKind: contract.companyKind ?? "COMPANY",
         companyName: contract.companyName ?? "",
         companyShortName: contract.companyShortName ?? "",
         companyInn: contract.companyInn ?? "",
         companyKpp: contract.companyKpp ?? "",
         companyOgrn: contract.companyOgrn ?? "",
         companyAddress: contract.companyAddress ?? "",
+        companyPostalAddress: contract.companyPostalAddress ?? "",
         companyEmail: contract.companyEmail ?? "",
         companyPhone: contract.companyPhone ?? "",
         companyBankName: contract.companyBankName ?? "",
@@ -61,6 +66,9 @@ export default async function EditContractPage({
         companyDirectorName: contract.companyDirectorName ?? "",
         companyDirectorPosition: contract.companyDirectorPosition ?? "Генеральный директор",
         companyDirectorGender: contract.companyDirectorGender ?? "MALE",
+        companyDirectorPositionGenitive:
+          contract.companyDirectorPositionGenitive ?? "",
+        companyDirectorNameGenitive: contract.companyDirectorNameGenitive ?? "",
         companyBasis: contract.companyBasis ?? "Устава",
         companyGuestText: contract.companyGuestText ?? "",
       }}

@@ -8,11 +8,14 @@ datasource db {
 }
 
 model Property {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String?
+  address     String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   contracts Contract[]
 }
@@ -31,6 +34,7 @@ enum Gender {
   MALE
   FEMALE
 }
+
 enum CompanyKind {
   COMPANY
   IP
@@ -60,24 +64,24 @@ model Tenant {
 model Company {
   id String @id @default(cuid())
 
-  kind CompanyKind @default(COMPANY)
-  name                 String
-  shortName            String?
-  inn                  String?
-  kpp                  String?
-  ogrn                 String?
-  address              String?
-  postalAddress String?
-  email                String?
-  phone                String?
-  bankName             String?
-  bankBik              String?
-  bankAccount          String?
-  correspondentAccount String?
-  directorName         String?
-  directorPosition     String?
-  directorGender       Gender?
-  basis                String?
+  kind                     CompanyKind @default(COMPANY)
+  name                     String
+  shortName                String?
+  inn                      String?
+  kpp                      String?
+  ogrn                     String?
+  address                  String?
+  postalAddress            String?
+  email                    String?
+  phone                    String?
+  bankName                 String?
+  bankBik                  String?
+  bankAccount              String?
+  correspondentAccount     String?
+  directorName             String?
+  directorPosition         String?
+  directorGender           Gender?
+  basis                    String?
   directorPositionGenitive String?
   directorNameGenitive     String?
 
@@ -92,14 +96,17 @@ model Company {
 model Contract {
   id String @id @default(cuid())
 
-  number String @unique // "80/2026"
+  number String @unique
   year   Int
   seq    Int
 
   type ContractType
 
-  propertyCode String
-  property     Property @relation(fields: [propertyCode], references: [code])
+  propertyId      String?
+  property        Property? @relation(fields: [propertyId], references: [id])
+  propertyCode    String
+  propertyName    String?
+  propertyAddress String?
 
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id])
@@ -116,37 +123,36 @@ model Contract {
   pricePerDayRub Int @default(0)
   priceRub       Int
 
-  // снимок данных арендатора (чтобы договор фиксировался)
   tenantName     String?
   tenantPassport String?
   tenantAddress  String?
 
-  // снимок данных юрлица (чтобы договор фиксировался)
-  companyKind CompanyKind?
-  companyName                 String?
-  companyShortName            String?
-  companyInn                  String?
-  companyKpp                  String?
-  companyOgrn                 String?
-  companyAddress              String?
-  companyPostalAddress        String?
-  companyEmail                String?
-  companyPhone                String?
-  companyBankName             String?
-  companyBankBik              String?
-  companyBankAccount          String?
-  companyCorrespondentAccount String?
-  companyDirectorName         String?
-  companyDirectorPosition     String?
-  companyDirectorGender       Gender?
-  companyBasis                String?
+  companyKind                     CompanyKind?
+  companyName                     String?
+  companyShortName                String?
+  companyInn                      String?
+  companyKpp                      String?
+  companyOgrn                     String?
+  companyAddress                  String?
+  companyPostalAddress            String?
+  companyEmail                    String?
+  companyPhone                    String?
+  companyBankName                 String?
+  companyBankBik                  String?
+  companyBankAccount              String?
+  companyCorrespondentAccount     String?
+  companyDirectorName             String?
+  companyDirectorPosition         String?
+  companyDirectorGender           Gender?
+  companyBasis                    String?
   companyDirectorPositionGenitive String?
   companyDirectorNameGenitive     String?
-  companyGuestText            String?
+  companyGuestText                String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([year, seq])
   @@index([companyId])
+  @@index([propertyId])
 }

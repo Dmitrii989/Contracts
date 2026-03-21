@@ -11,14 +11,14 @@ function formatRuDate(d: Date) {
   return `${dd}.${mm}.${yyyy}`;
 }
 
-function formatRuDateSafe(v: unknown) {
+function formatRuDateSafe(v: any) {
   if (!v) return "";
-  const dt = v instanceof Date ? v : new Date(v as string | number | Date);
+  const dt = v instanceof Date ? v : new Date(v);
   if (Number.isNaN(dt.getTime())) return "";
   return formatRuDate(dt);
 }
 
-function s(v: unknown) {
+function s(v: any) {
   return v === null || v === undefined ? "" : String(v);
 }
 
@@ -62,52 +62,47 @@ function moneyWordsRu(num: number) {
     return f5;
   }
 
-  function triadToWords(n: number, female = false) {
-    let result: string[] = [];
-    const h = Math.floor(n / 100);
-    const t = Math.floor((n % 100) / 10);
-    const u = n % 10;
+  function triadToWords(num: number, female = false) {
+    const result: string[] = [];
+    const u = female ? unitsFemale : unitsMale;
+
+    const h = Math.floor(num / 100);
+    const t = Math.floor((num % 100) / 10);
+    const uNum = num % 10;
 
     if (h > 0) result.push(hundreds[h]);
 
     if (t > 1) {
       result.push(tens[t]);
-      if (u > 0) result.push((female ? unitsFemale : unitsMale)[u]);
+      if (uNum > 0) result.push(u[uNum]);
     } else if (t === 1) {
-      result.push(teens[u]);
-    } else if (u > 0) {
-      result.push((female ? unitsFemale : unitsMale)[u]);
+      result.push(teens[uNum]);
+    } else if (uNum > 0) {
+      result.push(u[uNum]);
     }
 
     return result.join(" ");
   }
 
-  const rub = Math.floor(Number(num) || 0);
-  const kop = 0;
+  const rub = Math.floor(num);
+  const kop = Math.round((num - rub) * 100);
 
-  const billions = Math.floor(rub / 1_000_000_000);
-  const millions = Math.floor((rub % 1_000_000_000) / 1_000_000);
-  const thousands = Math.floor((rub % 1_000_000) / 1_000);
-  const rest = rub % 1_000;
+  if (rub === 0) {
+    return `Ноль рублей ${String(kop).padStart(2, "0")} ${morph(kop, "копейка", "копейки", "копеек")}`;
+  }
 
   const words: string[] = [];
-
-  if (billions > 0) {
-    words.push(triadToWords(billions));
-    words.push(morph(billions, "миллиард", "миллиарда", "миллиардов"));
-  }
-
-  if (millions > 0) {
-    words.push(triadToWords(millions));
-    words.push(morph(millions, "миллион", "миллиона", "миллионов"));
-  }
+  const thousands = Math.floor(rub / 1000);
+  const rest = rub % 1000;
 
   if (thousands > 0) {
-    words.push(triadToWords(thousands, true));
-    words.push(morph(thousands, "тысяча", "тысячи", "тысяч"));
+    words.push(
+      triadToWords(thousands, true),
+      morph(thousands, "тысяча", "тысячи", "тысяч")
+    );
   }
 
-  if (rest > 0 || words.length === 0) {
+  if (rest > 0) {
     words.push(triadToWords(rest));
   }
 
@@ -137,7 +132,7 @@ function daysWord(n: number) {
 }
 
 function getCompanyKind(contract: any) {
-  return contract.companyKind ?? contract.company?.kind ?? "";
+  return contract.company?.kind ?? contract.companyKind ?? "";
 }
 
 function getCompanyNamedAs(contract: any) {
@@ -237,38 +232,37 @@ export async function buildDocxBuffer(
       : "contract_person_template.docx");
 
   const templatePath = path.join(process.cwd(), "templates", resolvedTemplateName);
-
-  if (!fs.existsSync(templatePath)) {
-    throw Object.assign(new Error("Template not found"), {
-      status: 500,
-      templatePath,
-    });
-  }
-
-  const content = fs.readFileSync(templatePath);
-  const zip = new PizZip(content);
-
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
+if (!fs.existsSync(templatePath)) {
+  throw Object.assign(new Error("Template not found"), {
+    status: 500,
+    templatePath,
   });
+}
+
+const content = fs.readFileSync(templatePath);
+
+console.log("DOCX LOAD:", {
+  templatePath,
+  isBuffer: Buffer.isBuffer(content),
+  type: typeof content,
+});
+
+const zip = new PizZip(content);
+
+const doc = new Docxtemplater(zip, {
+  paragraphLoop: true,
+  linebreaks: true,
+});
 
   const tenant = contract.tenant;
 
-  const propertyCode = s(contract.propertyCode);
-  const propertyAddress = s(contract.propertyAddress ?? contract.property?.address ?? "");
+  const tenantFio = tenant?.fio ?? contract.tenantName ?? "";
 
-  const tenantFio = contract.tenantName ?? tenant?.fio ?? "";
+  const tenantPassport = tenant
+    ? `${tenant.passportSeries ?? ""} ${tenant.passportNumber ?? ""}`.replace(/\s+/g, " ").trim()
+    : (contract.tenantPassport ?? "");
 
-  const tenantPassport =
-    contract.tenantPassport ??
-    (tenant
-      ? `${tenant.passportSeries ?? ""} ${tenant.passportNumber ?? ""}`
-          .replace(/\s+/g, " ")
-          .trim()
-      : "");
-
-  const tenantRegAddress = contract.tenantAddress ?? tenant?.regAddress ?? "";
+  const tenantRegAddress = tenant?.regAddress ?? contract.tenantAddress ?? "";
   const tenantNamedAs = getTenantNamedAs(tenant?.gender);
 
   const signInitials =
@@ -299,108 +293,109 @@ export async function buildDocxBuffer(
   const landlordIntro = buildLandlordIntro();
   const guests = (contract.companyGuestText ?? "").trim();
 
-  const guestPhrase = guests
-    ? guests.includes(",")
-      ? `для проживания представителей арендатора: ${guests}`
-      : `для проживания представителя арендатора: ${guests}`
-    : `для проживания`;
+const guestPhrase = guests
+  ? guests.includes(",")
+    ? `для проживания представителей арендатора: ${guests}`
+    : `для проживания представителя арендатора: ${guests}`
+  : `для проживания`;
 
-  const companyStayPurposeText =
-    `Предоставление во временное пользование жилого помещения по адресу: ${propertyAddress} ${guestPhrase} в период с ${formatRuDateSafe(contract.checkIn)} г. по ${formatRuDateSafe(contract.checkOut)} г.`;
+const companyStayPurposeText =
+  `Предоставление во временное пользование жилого помещения по адресу: ${s(contract.property?.address ?? "")} ${guestPhrase} в период с ${formatRuDateSafe(contract.checkIn)} г. по ${formatRuDateSafe(contract.checkOut)} г.`;
 
   try {
-    doc.render({
-      CONTRACT_TYPE: s(contract.type),
-      IS_PERSON: isPerson,
-      IS_COMPANY: isCompany,
-      LANDLORD_INTRO: s(landlordIntro),
+  doc.render({
+    CONTRACT_TYPE: s(contract.type),
+    IS_PERSON: isPerson,
+    IS_COMPANY: isCompany,
+    LANDLORD_INTRO: s(landlordIntro),
 
-      CONTRACT_NUMBER: s(contract.number),
-      CONTRACT_DATE: formatRuDateSafe(contractDate),
-      ACT_DATE: formatRuDateSafe(actDate),
-      INVOICE_DATE: formatRuDateSafe(invoiceDate),
+    CONTRACT_NUMBER: s(contract.number),
+    CONTRACT_DATE: formatRuDateSafe(contractDate),
+    ACT_DATE: formatRuDateSafe(actDate),
+    INVOICE_DATE: formatRuDateSafe(invoiceDate),
 
-      CHECKIN_DATE: formatRuDateSafe(contract.checkIn),
-      CHECKOUT_DATE: formatRuDateSafe(contract.checkOut),
-      DAYS: s(days),
-      DAYS_WORD: daysWord(days),
+    CHECKIN_DATE: formatRuDateSafe(contract.checkIn),
+    CHECKOUT_DATE: formatRuDateSafe(contract.checkOut),
+    DAYS: s(days),
+    DAYS_WORD: daysWord(days),
 
-      PRICE_PER_DAY: s(
-        contract.pricePerDayRub !== null && contract.pricePerDayRub !== undefined
-          ? contract.pricePerDayRub.toLocaleString("ru-RU")
-          : ""
-      ),
-      RENT_PRICE: s(
-        contract.priceRub !== null && contract.priceRub !== undefined
-          ? contract.priceRub.toLocaleString("ru-RU")
-          : ""
-      ),
-      PRICE_WORDS: s(moneyWordsRu(contract.priceRub ?? 0)),
+    PRICE_PER_DAY: s(
+      contract.pricePerDayRub !== null && contract.pricePerDayRub !== undefined
+        ? contract.pricePerDayRub.toLocaleString("ru-RU")
+        : ""
+    ),
+    RENT_PRICE: s(
+      contract.priceRub !== null && contract.priceRub !== undefined
+        ? contract.priceRub.toLocaleString("ru-RU")
+        : ""
+    ),
+    PRICE_WORDS: s(moneyWordsRu(contract.priceRub ?? 0)),
 
-      PROPERTY_CODE: propertyCode,
-      PROPERTY_ADDRESS: propertyAddress,
+    PROPERTY_CODE: s(contract.propertyCode),
+    PROPERTY_ADDRESS: s(contract.property?.address ?? ""),
 
-      PAY_DEADLINE_DATE: formatRuDateSafe(payDeadlineDate),
+    PAY_DEADLINE_DATE: formatRuDateSafe(payDeadlineDate),
 
-      TENANT_FIO: s(tenantFio),
-      TENANT_NAMED_AS: s(tenantNamedAs),
-      TENANT_BIRTHDATE: formatRuDateSafe(tenant?.birthDate),
+    TENANT_FIO: s(tenantFio),
+    TENANT_NAMED_AS: s(tenantNamedAs),
+    TENANT_BIRTHDATE: formatRuDateSafe(tenant?.birthDate),
 
-      TENANT_PASSPORT: s(tenantPassport),
-      TENANT_PASSPORT_ISSUED_BY: s(tenant?.passportIssuedBy ?? ""),
-      TENANT_PASSPORT_CODE: s(tenant?.passportCode ?? ""),
-      TENANT_PASSPORT_ISSUED_AT: formatRuDateSafe(tenant?.passportIssuedAt),
+    TENANT_PASSPORT: s(tenantPassport),
+    TENANT_PASSPORT_ISSUED_BY: s(tenant?.passportIssuedBy ?? ""),
+    TENANT_PASSPORT_CODE: s(tenant?.passportCode ?? ""),
+    TENANT_PASSPORT_ISSUED_AT: formatRuDateSafe(tenant?.passportIssuedAt),
 
-      TENANT_ADDRESS: s(tenantRegAddress),
+    TENANT_ADDRESS: s(tenantRegAddress),
 
-      TENANT_SIGN_INITIALS: s(signInitials),
-      TENANT_SIGN_SURNAME: s(signSurname),
+    TENANT_SIGN_INITIALS: s(signInitials),
+    TENANT_SIGN_SURNAME: s(signSurname),
 
-      COMPANY_NAME: s(contract.companyName),
-      COMPANY_SHORT_NAME: s(contract.companyShortName),
-      COMPANY_KIND: s(getCompanyKind(contract)),
-      COMPANY_INN: s(contract.companyInn),
-      COMPANY_KPP: s(getCompanyKpp(contract)),
-      COMPANY_OGRN: s(contract.companyOgrn),
-      COMPANY_OGRN_LABEL: s(getCompanyOgrnLabel(contract)),
-      COMPANY_ADDRESS: s(contract.companyAddress),
-      COMPANY_POSTAL_ADDRESS: s(contract.companyPostalAddress ?? ""),
-      COMPANY_EMAIL: s(contract.companyEmail),
-      COMPANY_PHONE: s(contract.companyPhone),
+    COMPANY_NAME: s(contract.companyName),
+    COMPANY_SHORT_NAME: s(contract.companyShortName),
+    COMPANY_KIND: s(getCompanyKind(contract)),
+    COMPANY_INN: s(contract.companyInn),
+    COMPANY_KPP: s(getCompanyKpp(contract)),
+    COMPANY_OGRN: s(contract.companyOgrn),
+    COMPANY_OGRN_LABEL: s(getCompanyOgrnLabel(contract)),
+    COMPANY_ADDRESS: s(contract.companyAddress),
+    COMPANY_POSTAL_ADDRESS: s(contract.companyPostalAddress ?? ""),
+    COMPANY_EMAIL: s(contract.companyEmail),
+    COMPANY_PHONE: s(contract.companyPhone),
 
-      COMPANY_BANK_NAME: s(contract.companyBankName),
-      COMPANY_BANK_BIK: s(contract.companyBankBik),
-      COMPANY_BANK_ACCOUNT: s(contract.companyBankAccount),
-      COMPANY_CORRESPONDENT_ACCOUNT: s(contract.companyCorrespondentAccount),
+    COMPANY_BANK_NAME: s(contract.companyBankName),
+    COMPANY_BANK_BIK: s(contract.companyBankBik),
+    COMPANY_BANK_ACCOUNT: s(contract.companyBankAccount),
+    COMPANY_CORRESPONDENT_ACCOUNT: s(contract.companyCorrespondentAccount),
 
-      COMPANY_DIRECTOR_NAME: s(contract.companyDirectorName),
-      COMPANY_DIRECTOR_SHORT_FIO: s(companyDirectorShortFio),
-      COMPANY_DIRECTOR_POSITION: s(contract.companyDirectorPosition),
-      COMPANY_DIRECTOR_POSITION_GENITIVE: s(contract.companyDirectorPositionGenitive),
-      COMPANY_DIRECTOR_GENDER: s(contract.companyDirectorGender),
-      COMPANY_DIRECTOR_NAME_GENITIVE: s(contract.companyDirectorNameGenitive),
-      COMPANY_BASIS: s(contract.companyBasis),
-      COMPANY_GUEST_TEXT: s(contract.companyGuestText ?? ""),
-      COMPANY_STAY_PURPOSE_TEXT: s(companyStayPurposeText),
+    COMPANY_DIRECTOR_NAME: s(contract.companyDirectorName),
+    COMPANY_DIRECTOR_SHORT_FIO: s(companyDirectorShortFio),
+    COMPANY_DIRECTOR_POSITION: s(contract.companyDirectorPosition),
+    COMPANY_DIRECTOR_POSITION_GENITIVE: s(contract.companyDirectorPositionGenitive),
+    COMPANY_DIRECTOR_GENDER: s(contract.companyDirectorGender),
+    COMPANY_DIRECTOR_NAME_GENITIVE: s(contract.companyDirectorNameGenitive),
+    COMPANY_BASIS: s(contract.companyBasis),
+    COMPANY_GUEST_TEXT: s(contract.companyGuestText ?? ""),
+    COMPANY_STAY_PURPOSE_TEXT: s(companyStayPurposeText),
 
-      COMPANY_ACTING_AS: s(getCompanyActingAs()),
-      COMPANY_NAMED_AS: s(getCompanyNamedAs(contract)),
-      COMPANY_INTRO: s(buildCompanyIntro(contract)),
+    COMPANY_ACTING_AS: s(getCompanyActingAs()),
+    COMPANY_NAMED_AS: s(getCompanyNamedAs(contract)),
+    COMPANY_INTRO: s(buildCompanyIntro(contract)),
 
-      COMPANY_INN_KPP_TEXT:
-        getCompanyKind(contract) === "IP"
-          ? `ИНН: ${s(contract.companyInn)}`
-          : `ИНН/КПП: ${s(contract.companyInn)}${contract.companyKpp ? " / " + s(contract.companyKpp) : ""}`,
+    COMPANY_INN_KPP_TEXT:
+      getCompanyKind(contract) === "IP"
+        ? `ИНН: ${s(contract.companyInn)}`
+        : `ИНН/КПП: ${s(contract.companyInn)}${contract.companyKpp ? " / " + s(contract.companyKpp) : ""}`,
 
-      COMPANY_OGRN_TEXT:
-        getCompanyKind(contract) === "IP"
-          ? `ОГРНИП: ${s(contract.companyOgrn)}`
-          : `ОГРН: ${s(contract.companyOgrn)}`,
-    });
-  } catch (err: any) {
-    console.error("DOCX RENDER ERROR", err);
-    throw err;
-  }
+    COMPANY_OGRN_TEXT:
+      getCompanyKind(contract) === "IP"
+        ? `ОГРНИП: ${s(contract.companyOgrn)}`
+        : `ОГРН: ${s(contract.companyOgrn)}`,
+  });
+} catch (err: any) {
+  console.error("DOCX RENDER ERROR", err);
+  throw err;
+}
+
 
   const docx: Buffer = doc.getZip().generate({ type: "nodebuffer" });
   const filenameBase = `Договор_${contract.number.replace("/", "-")}_${contract.propertyCode}`;

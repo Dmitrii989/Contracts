@@ -9,7 +9,12 @@ export async function GET(
   ctx: { params: { id: string } }
 ) {
   try {
-    const { id } = await Promise.resolve(ctx.params);
+    const params = await Promise.resolve(ctx.params);
+    const id = String(params?.id ?? "").trim();
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
 
     const contract = await prisma.contract.findUnique({
       where: { id },
@@ -30,17 +35,23 @@ export async function GET(
 
     const { docx } = await buildDocxBuffer(id, template);
 
+    const fileName = `Акт_${contract.number.replace("/", "-")}.docx`;
+
     return new NextResponse(docx, {
-  headers: {
-    "Content-Type":
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "Content-Disposition": `attachment; filename="act_${contract.number.replace("/", "-")}.docx"`,
-  },
-});
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(
+          fileName
+        )}`,
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (e: any) {
     return NextResponse.json(
       { error: "Act generation failed", details: String(e?.message ?? e) },
-      { status: 500 }
+      { status: e?.status ?? 500 }
     );
   }
 }

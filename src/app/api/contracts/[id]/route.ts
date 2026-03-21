@@ -46,8 +46,10 @@ export async function GET(
       number: item.number,
       type: item.type,
 
+      propertyId: item.propertyId ?? null,
       propertyCode: item.propertyCode,
-      propertyAddress: item.property?.address ?? null,
+      propertyName: item.propertyName ?? item.property?.name ?? null,
+      propertyAddress: item.propertyAddress ?? item.property?.address ?? null,
 
       checkIn: item.checkIn,
       checkOut: item.checkOut,
@@ -79,23 +81,32 @@ export async function GET(
       companyKpp: item.companyKpp ?? item.company?.kpp ?? null,
       companyOgrn: item.companyOgrn ?? item.company?.ogrn ?? null,
       companyAddress: item.companyAddress ?? item.company?.address ?? null,
-      companyPostalAddress: item.companyPostalAddress ?? item.company?.postalAddress ?? null,
+      companyPostalAddress:
+        item.companyPostalAddress ?? item.company?.postalAddress ?? null,
       companyEmail: item.companyEmail ?? item.company?.email ?? null,
       companyPhone: item.companyPhone ?? item.company?.phone ?? null,
       companyBankName: item.companyBankName ?? item.company?.bankName ?? null,
       companyBankBik: item.companyBankBik ?? item.company?.bankBik ?? null,
-      companyBankAccount: item.companyBankAccount ?? item.company?.bankAccount ?? null,
+      companyBankAccount:
+        item.companyBankAccount ?? item.company?.bankAccount ?? null,
       companyCorrespondentAccount:
-        item.companyCorrespondentAccount ?? item.company?.correspondentAccount ?? null,
-      companyDirectorName: item.companyDirectorName ?? item.company?.directorName ?? null,
+        item.companyCorrespondentAccount ??
+        item.company?.correspondentAccount ??
+        null,
+      companyDirectorName:
+        item.companyDirectorName ?? item.company?.directorName ?? null,
       companyDirectorPosition:
         item.companyDirectorPosition ?? item.company?.directorPosition ?? null,
-        companyDirectorPositionGenitive:
-  item.companyDirectorPositionGenitive ?? item.company?.directorPositionGenitive ?? null,
+      companyDirectorPositionGenitive:
+        item.companyDirectorPositionGenitive ??
+        item.company?.directorPositionGenitive ??
+        null,
       companyDirectorGender:
         item.companyDirectorGender ?? item.company?.directorGender ?? null,
-        companyDirectorNameGenitive:
-  item.companyDirectorNameGenitive ?? item.company?.directorNameGenitive ?? null,
+      companyDirectorNameGenitive:
+        item.companyDirectorNameGenitive ??
+        item.company?.directorNameGenitive ??
+        null,
       companyBasis: item.companyBasis ?? item.company?.basis ?? null,
       companyGuestText: item.companyGuestText ?? null,
 
@@ -140,7 +151,7 @@ export async function PUT(
       return NextResponse.json({ error: "Bad type" }, { status: 400 });
     }
 
-    const propertyCode = String(body.propertyCode || "").trim();
+    const propertyId = String(body.propertyId || "").trim();
 
     const checkIn = new Date(String(body.checkIn) + "T00:00:00");
     const checkOut = new Date(String(body.checkOut) + "T00:00:00");
@@ -163,7 +174,7 @@ export async function PUT(
     const companyId =
       type === "COMPANY" && body.companyId ? String(body.companyId).trim() : null;
 
-    if (!propertyCode || !isValidDate(checkIn) || !isValidDate(checkOut)) {
+    if (!propertyId || !isValidDate(checkIn) || !isValidDate(checkOut)) {
       return NextResponse.json({ error: "Bad request" }, { status: 400 });
     }
 
@@ -196,6 +207,14 @@ export async function PUT(
 
     if (!Number.isFinite(priceRub) || priceRub <= 0) {
       return NextResponse.json({ error: "Missing priceRub" }, { status: 400 });
+    }
+
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+
+    if (!property) {
+      return NextResponse.json({ error: "Property not found" }, { status: 400 });
     }
 
     let tenantName: string | null = null;
@@ -245,7 +264,9 @@ export async function PUT(
     let companyAddress =
       type === "COMPANY" ? String(body.companyAddress || "").trim() || null : null;
     let companyPostalAddress =
-      type === "COMPANY" ? String(body.companyPostalAddress || "").trim() || null : null;
+      type === "COMPANY"
+        ? String(body.companyPostalAddress || "").trim() || null
+        : null;
     let companyEmail =
       type === "COMPANY" ? String(body.companyEmail || "").trim() || null : null;
     let companyPhone =
@@ -261,26 +282,30 @@ export async function PUT(
         ? String(body.companyCorrespondentAccount || "").trim() || null
         : null;
     let companyDirectorName =
-      type === "COMPANY" ? String(body.companyDirectorName || "").trim() || null : null;
+      type === "COMPANY"
+        ? String(body.companyDirectorName || "").trim() || null
+        : null;
     let companyDirectorPosition =
       type === "COMPANY"
         ? String(body.companyDirectorPosition || "").trim() || null
         : null;
-        let companyDirectorPositionGenitive =
-  type === "COMPANY"
-    ? String(body.companyDirectorPositionGenitive || "").trim() || null
-    : null;
+    let companyDirectorPositionGenitive =
+      type === "COMPANY"
+        ? String(body.companyDirectorPositionGenitive || "").trim() || null
+        : null;
     let companyGuestText =
-  type === "COMPANY" ? String(body.companyGuestText || "").trim() || null : null;
+      type === "COMPANY"
+        ? String(body.companyGuestText || "").trim() || null
+        : null;
     let companyDirectorGender =
       type === "COMPANY" &&
       (body.companyDirectorGender === "MALE" || body.companyDirectorGender === "FEMALE")
         ? body.companyDirectorGender
         : null;
-        let companyDirectorNameGenitive =
-  type === "COMPANY"
-    ? String(body.companyDirectorNameGenitive || "").trim() || null
-    : null;
+    let companyDirectorNameGenitive =
+      type === "COMPANY"
+        ? String(body.companyDirectorNameGenitive || "").trim() || null
+        : null;
     let companyBasis =
       type === "COMPANY" ? String(body.companyBasis || "").trim() || null : null;
 
@@ -294,31 +319,41 @@ export async function PUT(
       }
 
       companyKind = company.kind ?? companyKind;
-      companyName = company.name;
-      companyShortName = company.shortName ?? null;
-      companyInn = company.inn ?? null;
-      companyKpp = company.kpp ?? null;
-      companyOgrn = company.ogrn ?? null;
-      companyAddress = company.address ?? null;
-      companyPostalAddress = company.postalAddress ?? null;
-      companyEmail = company.email ?? null;
-      companyPhone = company.phone ?? null;
-      companyBankName = company.bankName ?? null;
-      companyBankBik = company.bankBik ?? null;
-      companyBankAccount = company.bankAccount ?? null;
-      companyCorrespondentAccount = company.correspondentAccount ?? null;
-      companyDirectorName = company.directorName ?? null;
-      companyDirectorPosition = company.directorPosition ?? null;
-      companyDirectorPositionGenitive = company.directorPositionGenitive ?? null;
-      companyDirectorGender = company.directorGender ?? null;
-      companyDirectorNameGenitive = company.directorNameGenitive ?? null;
-      companyBasis = company.basis ?? null;
+
+      companyName = companyName || company.name;
+      companyShortName = companyShortName || company.shortName ?? null;
+      companyInn = companyInn || company.inn ?? null;
+      companyKpp = companyKpp || company.kpp ?? null;
+      companyOgrn = companyOgrn || company.ogrn ?? null;
+      companyAddress = companyAddress || company.address ?? null;
+      companyPostalAddress = companyPostalAddress || company.postalAddress ?? null;
+      companyEmail = companyEmail || company.email ?? null;
+      companyPhone = companyPhone || company.phone ?? null;
+      companyBankName = companyBankName || company.bankName ?? null;
+      companyBankBik = companyBankBik || company.bankBik ?? null;
+      companyBankAccount = companyBankAccount || company.bankAccount ?? null;
+      companyCorrespondentAccount =
+      companyCorrespondentAccount || company.correspondentAccount ?? null;
+
+      companyDirectorName = companyDirectorName || company.directorName ?? null;
+      companyDirectorPosition =
+      companyDirectorPosition || company.directorPosition ?? null;
+      companyDirectorPositionGenitive =
+      companyDirectorPositionGenitive || company.directorPositionGenitive ?? null;
+      companyDirectorGender =
+      companyDirectorGender || company.directorGender ?? null;
+      companyDirectorNameGenitive =
+      companyDirectorNameGenitive || company.directorNameGenitive ?? null;
+      companyBasis = companyBasis || company.basis ?? null;
     }
 
     if (type === "COMPANY") {
       if (!companyName) {
         return NextResponse.json({ error: "Missing companyName" }, { status: 400 });
       }
+      if (type === "COMPANY" && !companyId) {
+        return NextResponse.json({ error: "Missing companyId" }, { status: 400 });
+    }
 
       if (!companyDirectorName) {
         return NextResponse.json(
@@ -336,12 +371,18 @@ export async function PUT(
       where: { id },
       data: {
         type,
-        propertyCode,
+
+        propertyId: property.id,
+        propertyCode: property.code,
+        propertyName: property.name ?? null,
+        propertyAddress: property.address ?? null,
+
         checkIn,
         checkOut,
         contractDate,
         actDate,
         invoiceDate,
+
         pricePerDayRub: Number.isFinite(pricePerDayRub)
           ? Math.round(pricePerDayRub)
           : 0,

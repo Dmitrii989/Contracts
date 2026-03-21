@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  filterInputStyle,
+  pageMainStyle,
+  pageHeaderStyle,
+  pageHeaderActionsStyle,
+  secondaryButtonStyle,
+  primaryButtonStyle,
+} from "@/components/ui/styles";
+import TableCard from "@/components/ui/TableCard";
 
 type Tenant = {
   id: string;
@@ -49,101 +58,73 @@ export default function TenantsPage() {
       }
     })();
   }, []);
-const filteredItems = items.filter((t) => {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
 
-  const passport = [t.passportSeries, t.passportNumber]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+
+    return items.filter((t) => {
+      const passport = [t.passportSeries, t.passportNumber]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return (
+        (t.fio || "").toLowerCase().includes(q) ||
+        passport.includes(q) ||
+        (t.passportCode || "").toLowerCase().includes(q) ||
+        (t.regAddress || "").toLowerCase().includes(q)
+      );
+    });
+  }, [items, query]);
+
+  const GRID = "1.6fr 130px 170px 180px 170px 2fr 170px";
 
   return (
-    (t.fio || "").toLowerCase().includes(q) ||
-    passport.includes(q) ||
-    (t.passportCode || "").toLowerCase().includes(q) ||
-    (t.regAddress || "").toLowerCase().includes(q)
-  );
-});
-  return (
-    <main style={{ padding: 24, width: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: 34 }}>Арендаторы</h1>
+    <main style={pageMainStyle}>
+      <div style={pageHeaderStyle}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 34 }}>Арендаторы</h1>
+          <div style={{ marginTop: 6, fontSize: 13, opacity: 0.7 }}>
+            Справочник физических лиц для договоров аренды
+          </div>
+        </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <a
-            href="/contracts/new"
-            style={{
-              padding: "10px 14px",
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              textDecoration: "none",
-              fontWeight: 700,
-              background: "white",
-            }}
-          >
-            ← К договору
+        <div style={pageHeaderActionsStyle}>
+          <a href="/contracts" style={secondaryButtonStyle}>
+            Договоры
           </a>
 
-          <a
-            href="/tenants/new"
-            style={{
-              padding: "10px 14px",
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              textDecoration: "none",
-              fontWeight: 700,
-              background: "white",
-            }}
-          >
+          <a href="/tenants/new" style={primaryButtonStyle}>
             + Новый арендатор
           </a>
         </div>
       </div>
-<div style={{ marginTop: 16 }}>
-  <input
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    placeholder="Поиск по ФИО, паспорту, коду подразделения, адресу"
-    style={{
-      width: "100%",
-      maxWidth: 520,
-      height: 40,
-      padding: "0 12px",
-      borderRadius: 10,
-      border: "1px solid #d1d5db",
-      outline: "none",
-      background: "white",
-    }}
-  />
-</div>
+
+      <div style={{ marginTop: 16 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск по ФИО, паспорту, коду подразделения, адресу"
+          style={filterInputStyle}
+        />
+      </div>
+
+      <div style={{ marginTop: 10, fontSize: 12, opacity: 0.65 }}>
+        Найдено: {filteredItems.length}
+      </div>
+
       {loading ? (
         <div style={{ marginTop: 16 }}>Загрузка...</div>
       ) : err ? (
         <div style={{ marginTop: 16, color: "crimson" }}>Ошибка: {err}</div>
       ) : (
-        <div
-          style={{
-            marginTop: 16,
-            border: "1px solid #eee",
-            borderRadius: 12,
-            overflowX: "hidden",
-            overflowY: "hidden",
-            background: "white",
-          }}
-        >
+  <TableCard>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr 120px",
-              background: "#fafafa",
+              gridTemplateColumns: GRID,
+              background: "#f9fafb",
               padding: "10px 12px",
               fontWeight: 700,
             }}
@@ -154,54 +135,57 @@ const filteredItems = items.filter((t) => {
             <div>Код подразделения</div>
             <div>Дата выдачи</div>
             <div>Адрес регистрации</div>
-            <div style={{ textAlign: "right" }}>Действия</div>
+            <div>Действия</div>
           </div>
 
-          {filteredItems.map((t) => (
-  <div
-    key={t.id}
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1.6fr 130px 170px 180px 170px 2fr 120px",
-      padding: "10px 12px",
-      borderTop: "1px solid #eee",
-      alignItems: "center",
-      transition: "background 0.15s",
-      cursor: "default",
-    }}
-    onMouseEnter={(e) => {
-      (e.currentTarget.style.background = "#e5e7eb");
-    }}
-    onMouseLeave={(e) => {
-      (e.currentTarget.style.background = "white");
-    }}
-  >
-              <div style={{ fontWeight: 700 }}>{t.fio || "—"}</div>
-              <div>{fmtDate(t.birthDate)}</div>
-              <div>
-                {[t.passportSeries, t.passportNumber].filter(Boolean).join(" ") || "—"}
-              </div>
-              <div>{t.passportCode || "—"}</div>
-              <div>{fmtDate(t.passportIssuedAt)}</div>
-              <div>{t.regAddress || "—"}</div>
-              <div style={{ textAlign: "right" }}>
-  <a
-    href={`/tenants/${t.id}`}
-    style={{
-      padding: "6px 10px",
-      border: "1px solid #ddd",
-      borderRadius: 8,
-      textDecoration: "none",
-      fontSize: 13,
-      background: "white",
-    }}
-  >
-    Изменить
-  </a>
-</div>
+          {filteredItems.length === 0 ? (
+            <div style={{ padding: 18, textAlign: "center", opacity: 0.7 }}>
+              Арендаторы не найдены.
             </div>
-          ))}
-        </div>
+          ) : (
+            filteredItems.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: GRID,
+                  padding: "10px 12px",
+                  borderTop: "1px solid #f1f5f9",
+                  alignItems: "center",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f9fafb";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "white";
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>{t.fio || "—"}</div>
+                <div>{fmtDate(t.birthDate)}</div>
+                <div>
+                  {[t.passportSeries, t.passportNumber].filter(Boolean).join(" ") || "—"}
+                </div>
+                <div>{t.passportCode || "—"}</div>
+                <div>{fmtDate(t.passportIssuedAt)}</div>
+                <div>{t.regAddress || "—"}</div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "nowrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <a href={`/tenants/${t.id}`} style={secondaryButtonStyle}>
+                    Редактировать
+                  </a>
+                </div>
+              </div>
+            ))
+          )}
+         </TableCard>
       )}
     </main>
   );

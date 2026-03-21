@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Bad type" }, { status: 400 });
     }
 
-    const propertyCode = String(body.propertyCode || "").trim();
+    const propertyId = String(body.propertyId || "").trim();
 
     const checkIn = new Date(String(body.checkIn) + "T00:00:00");
     const checkOut = new Date(String(body.checkOut) + "T00:00:00");
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     const companyId =
       type === "COMPANY" && body.companyId ? String(body.companyId).trim() : null;
 
-    if (!propertyCode || !isValidDate(checkIn) || !isValidDate(checkOut)) {
+    if (!propertyId || !isValidDate(checkIn) || !isValidDate(checkOut)) {
       return NextResponse.json({ error: "Bad request" }, { status: 400 });
     }
 
@@ -176,31 +176,40 @@ export async function POST(request: Request) {
       company = await prisma.company.findUnique({
         where: { id: companyId },
       });
-
+      if (type === "COMPANY" && !companyId) {
+        return NextResponse.json({ error: "Missing companyId" }, { status: 400 });
+      }
       if (!company) {
         return NextResponse.json({ error: "Company not found" }, { status: 400 });
       }
 
       companyKind = company.kind ?? companyKind;
-      companyName = company.name;
-      companyShortName = company.shortName ?? null;
-      companyInn = company.inn ?? null;
-      companyKpp = company.kpp ?? null;
-      companyOgrn = company.ogrn ?? null;
-      companyAddress = company.address ?? null;
-      companyPostalAddress = company.postalAddress ?? null;
-      companyEmail = company.email ?? null;
-      companyPhone = company.phone ?? null;
-      companyBankName = company.bankName ?? null;
-      companyBankBik = company.bankBik ?? null;
-      companyBankAccount = company.bankAccount ?? null;
-      companyCorrespondentAccount = company.correspondentAccount ?? null;
-      companyDirectorName = company.directorName ?? null;
-      companyDirectorPosition = company.directorPosition ?? null;
-      companyDirectorPositionGenitive = company.directorPositionGenitive ?? null;
-      companyDirectorGender = company.directorGender ?? null;
-      companyDirectorNameGenitive = company.directorNameGenitive ?? null;
-      companyBasis = company.basis ?? null;
+
+      companyName = companyName || company.name;
+      companyShortName = companyShortName || company.shortName ?? null;
+      companyInn = companyInn || company.inn ?? null;
+      companyKpp = companyKpp || company.kpp ?? null;
+      companyOgrn = companyOgrn || company.ogrn ?? null;
+      companyAddress = companyAddress || company.address ?? null;
+      companyPostalAddress = companyPostalAddress || company.postalAddress ?? null;
+      companyEmail = companyEmail || company.email ?? null;
+      companyPhone = companyPhone || company.phone ?? null;
+      companyBankName = companyBankName || company.bankName ?? null;
+      companyBankBik = companyBankBik || company.bankBik ?? null;
+      companyBankAccount = companyBankAccount || company.bankAccount ?? null;
+      companyCorrespondentAccount =
+      companyCorrespondentAccount || company.correspondentAccount ?? null;
+
+      companyDirectorName = companyDirectorName || company.directorName ?? null;
+      companyDirectorPosition =
+      companyDirectorPosition || company.directorPosition ?? null;
+      companyDirectorPositionGenitive =
+      companyDirectorPositionGenitive || company.directorPositionGenitive ?? null;
+      companyDirectorGender =
+      companyDirectorGender || company.directorGender ?? null;
+      companyDirectorNameGenitive =
+      companyDirectorNameGenitive || company.directorNameGenitive ?? null;
+      companyBasis = companyBasis || company.basis ?? null;
     }
 
     if (type === "COMPANY") {
@@ -219,6 +228,13 @@ export async function POST(request: Request) {
         companyKpp = null;
       }
     }
+    const property = await prisma.property.findUnique({
+  where: { id: propertyId },
+});
+
+if (!property) {
+  return NextResponse.json({ error: "Property not found" }, { status: 400 });
+}
 
     const year = checkIn.getFullYear();
 
@@ -238,7 +254,10 @@ export async function POST(request: Request) {
           year,
           seq,
           type,
-          propertyCode,
+          propertyId: property.id,
+          propertyCode: property.code,
+          propertyName: property.name ?? null,
+          propertyAddress: property.address ?? null,
           checkIn,
           checkOut,
           contractDate,

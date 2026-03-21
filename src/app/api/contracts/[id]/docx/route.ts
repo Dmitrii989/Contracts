@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { buildDocxBuffer } from "@/lib/contractsDocx";
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const params = await Promise.resolve(ctx.params);
     const id = String(params?.id ?? "").trim();
